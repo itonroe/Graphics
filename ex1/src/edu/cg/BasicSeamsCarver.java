@@ -341,6 +341,12 @@ public class BasicSeamsCarver extends ImageProcessor {
 		int Ey = Math.abs(greyImage.getRGB(x, y) - (y < inHeight - 1 ?  greyImage.getRGB(x, y + 1) : greyImage.getRGB(x, y - 1)));
 		return Ex + Ey;
 	}
+
+	private double getPixelEnergy1(int x, int y){
+		int Ex = Math.abs(greyImage.getRGB(x, y) - (x < inWidth - 1 ?  greyImage.getRGB(x + 1, y) : greyImage.getRGB(x - 1, y)));
+		int Ey = Math.abs(greyImage.getRGB(x, y) - (y < inHeight - 1 ?  greyImage.getRGB(x, y + 1) : greyImage.getRGB(x, y - 1)));
+		return Ex + Ey;
+	}
 	
 	public BufferedImage showSeams(boolean showVerticalSeams, int seamColorRGB) {
 		int numberOfVerticalSeamsToCarve = Math.abs(this.outWidth - this.inWidth);

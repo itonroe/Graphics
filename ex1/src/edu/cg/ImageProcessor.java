@@ -163,15 +163,18 @@ public class ImageProcessor extends FunctioalForEachLoops {
 
 		BufferedImage ans = newEmptyOutputSizedImage();
 
-		forEach((y, x) -> {
+		for(int x = 0; x < outWidth; x++)
+			for(int y = 0; y < outHeight; y++){
 
-			if (y == 0 && x == 2)
+			if (y == 0 && x == 650)
 			{
 				logger.log("Maya");
 			}
 			try {
-				int x1 = (int)Math.round((x*inWidth) / ((float)outWidth));
-				int y1 = (int)Math.round((y*inHeight) / ((float)outHeight));
+				float fx = ((float)x / outWidth) * (inWidth - 1);
+				float fy = ((float)y / outHeight) * (inHeight - 1);
+				int x1 = (int)fx;
+				int y1 = (int)fy;
 				x1 = Math.min(x1,  inWidth-2);
 				y1 = Math.min(y1, inHeight-2);
 
@@ -183,35 +186,33 @@ public class ImageProcessor extends FunctioalForEachLoops {
 				Color Q12 = new Color(workingImage.getRGB(x1, y2));
 				Color Q22 = new Color(workingImage.getRGB(x2, y2));
 
-				final int denominator = ((x2 - x1) * (y2 - y1));
+				int red12 = (int)lerp(Q11.getRed(), Q21.getRed(), fx - x1);
+				int green12 = (int)lerp(Q11.getGreen(), Q21.getGreen(), fx - x1);
+				int blue12 = (int)lerp(Q11.getBlue(), Q21.getBlue(), fx - x1);
+				int red34 = (int)lerp(Q12.getRed(), Q22.getRed(), fx - x1);
+				int green34 = (int)lerp(Q12.getGreen(), Q22.getGreen(), fx - x1);
+				int blue34 = (int)lerp(Q12.getBlue(), Q22.getBlue(), fx - x1);
 
-				Color C11 = ScalarMultColor(Q11, ((x2 - x) * (y2 - y)) / denominator);
-				Color C21 = ScalarMultColor(Q21, ((x - x1) * (y2 - y)) / denominator);
-				Color C12 = ScalarMultColor(Q12, ((x2 - x) * (y - y1)) / denominator);
-				Color C22 = ScalarMultColor(Q22, ((x - x1) * (y - y1)) / denominator);
+				int red = (int)lerp(red12, red34, fy - y1);
+				int green = (int)lerp(green12, green34, fy - y1);
+				int blue = (int)lerp(blue12, blue34, fy - y1);
 
-				Color P = new Color(C11.getRed() + C12.getRed() + C21.getRed() + C22.getRed(),
-						C11.getGreen() + C12.getGreen() + C21.getGreen() + C22.getGreen(),
-						C11.getBlue() + C12.getBlue() + C21.getBlue() + C22.getBlue());
-
+				Color P = new Color(red, green, blue);
 				ans.setRGB(x, y, P.getRGB());
 			}catch (Exception e){
 				logger.log(x + ", " + y);
 			}
-		});
+		};
 
 		logger.log("Bilinear interpolation is done!");
 
 		return ans;
 	}
 
-	private Color ScalarMultColor (Color c, int scalar){
-		int r = c.getRed() * scalar;
-		int b = c.getBlue() * scalar;
-		int g = c.getGreen() * scalar;
-
-		return new Color(r, g, b);
+	private static float lerp(int c1, int c2, float t) {
+		return (1 - t) * c1 + t * c2;
 	}
+
 	//MARK: Utilities
 	public final void setForEachInputParameters() {
 		setForEachParameters(inWidth, inHeight);

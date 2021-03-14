@@ -85,7 +85,7 @@ public class BasicSeamsCarver extends ImageProcessor {
 		logger.log("Preparing to carve image...");
 
 		setForEachInputParameters();
-		/*
+
 		InitializeVerticalSeam();
 
 		for (int i = 0; i < numberOfVerticalSeamsToCarve; i ++){
@@ -93,7 +93,7 @@ public class BasicSeamsCarver extends ImageProcessor {
 			seams.add(seam);
 			removeVerticalSeam(seam);
 		}
-		*/
+
 
 		InitializeHorizontalSeam();
 
@@ -124,7 +124,7 @@ public class BasicSeamsCarver extends ImageProcessor {
 		actualHeight --;
 
 		for (Coordinate c : seam.pixels) {
-			if (c.X == 162 && c.Y == 442){
+			if (c.X == 16 && c.Y == 442){
 				logger.log("MAYA");
 			}
 
@@ -142,7 +142,7 @@ public class BasicSeamsCarver extends ImageProcessor {
 			}
 		}
 
-		logger.log("Finished removing vertical seam...");
+		logger.log("Finished removing horizontal seam...");
 	}
 
 	private void removeVerticalSeam(Seam seam){
@@ -169,18 +169,16 @@ public class BasicSeamsCarver extends ImageProcessor {
 		logger.log("Initialize horizontal seam...");
 
 		//Initialize Matrix Value
-		forEach((y, x) -> {
+		for(int x = 0; x < inWidth; x++)
+			for(int y = 0; y < inHeight; y++){
 			try{
-				if (y == 294 && x == 1){
-					logger.log("r");
-				}
 				coordinates[y][x] = new Coordinate(x,y);
 				updateEnergyHorizontal(x, y);
 			}
 			catch (Exception e){
 				logger.log(x + ", " + y);
 			}
-		});
+		};
 
 		logger.log("Done horizontal seam...");
 	}
@@ -354,6 +352,36 @@ public class BasicSeamsCarver extends ImageProcessor {
 				// from the image.
 				// Then, generate a new image from the input image in which you mark all of the horizontal seams that
 				// were chosen in the Seam Carving process.
-		throw new UnimplementedMethodException("showSeams");
+		BufferedImage ans = duplicateWorkingImage();
+		if(showVerticalSeams){
+
+			InitializeVerticalSeam();
+
+			for (int i = 0; i < numberOfVerticalSeamsToCarve; i ++){
+				Seam seam = verticalSeam();
+				seams.add(seam);
+				removeVerticalSeam(seam);
+			}
+			for (int i = 0; i < numberOfVerticalSeamsToCarve; i++) {
+				for (int j = 0; j < inHeight; j++) {
+					ans.setRGB(seams.get(i).pixels.get(j).X, j, seamColorRGB);
+				}
+			}
+		} else {
+			InitializeHorizontalSeam();
+
+			for (int i = 0; i < numberOfHorizontalSeamsToCarve; i ++){
+				Seam seam = horizontalSeam();
+				seams.add(seam);
+				removeHorizontalSeam(seam);
+			}
+			for (int i = 0; i < numberOfHorizontalSeamsToCarve; i++) {
+				for (int j = 0; j < inWidth; j++) {
+					ans.setRGB(j, seams.get(i).pixels.get(j).Y, seamColorRGB);
+				}
+			}
+		}
+
+		return ans;
 	}
 }

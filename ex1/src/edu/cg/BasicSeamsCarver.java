@@ -86,22 +86,69 @@ public class BasicSeamsCarver extends ImageProcessor {
 
 		setForEachInputParameters();
 
-		InitializeVerticalSeam();
+		if(carvingScheme.description.equals("Vertical seams first")){
+			InitializeVerticalSeam();
 
-		for (int i = 0; i < numberOfVerticalSeamsToCarve; i ++){
-			Seam seam = verticalSeam();
-			seams.add(seam);
-			removeVerticalSeam(seam);
+			for (int i = 0; i < numberOfVerticalSeamsToCarve; i ++){
+				Seam seam = verticalSeam();
+				seams.add(seam);
+				removeVerticalSeam(seam);
+			}
+
+			InitializeHorizontalSeam();
+
+			for (int i = 0; i < numberOfHorizontalSeamsToCarve; i ++){
+				Seam seam = horizontalSeam();
+				seams.add(seam);
+				removeHorizontalSeam(seam);
+			}
+		}else if(carvingScheme.description.equals("Horizontal seams first")){			
+			InitializeHorizontalSeam();
+
+			for (int i = 0; i < numberOfHorizontalSeamsToCarve; i ++){
+				Seam seam = horizontalSeam();
+				seams.add(seam);
+				removeHorizontalSeam(seam);
+			}
+
+			InitializeVerticalSeam();
+
+			for (int i = 0; i < numberOfVerticalSeamsToCarve; i ++){
+				Seam seam = verticalSeam();
+				seams.add(seam);
+				removeVerticalSeam(seam);
+			}
+		}else{
+			while(numberOfHorizontalSeamsToCarve > 0 && numberOfVerticalSeamsToCarve > 0){
+				Seam seam = verticalSeam();
+				seams.add(seam);
+				removeVerticalSeam(seam);
+				numberOfVerticalSeamsToCarve--;
+
+				seam = horizontalSeam();
+				seams.add(seam);
+				removeHorizontalSeam(seam);
+				numberOfHorizontalSeamsToCarve--;
+
+			}
+			
+			while(numberOfHorizontalSeamsToCarve > 0){
+				Seam seam = horizontalSeam();
+				seams.add(seam);
+				removeHorizontalSeam(seam);
+				numberOfHorizontalSeamsToCarve--;
+			}
+
+			while(numberOfVerticalSeamsToCarve > 0){
+				Seam seam = verticalSeam();
+				seams.add(seam);
+				removeVerticalSeam(seam);
+				numberOfVerticalSeamsToCarve--;
+				
+			}
 		}
 
-
-		InitializeHorizontalSeam();
-
-		for (int i = 0; i < numberOfHorizontalSeamsToCarve; i ++){
-			Seam seam = horizontalSeam();
-			seams.add(seam);
-			removeHorizontalSeam(seam);
-		}
+		
 
 		logger.log("Build new Image ...");
 		BufferedImage ans = newEmptyOutputSizedImage();
@@ -117,7 +164,7 @@ public class BasicSeamsCarver extends ImageProcessor {
 		return ans;
 	}
 
-	private void removeHorizontalSeam(Seam seam){
+	private void  removeHorizontalSeam(Seam seam){
 
 		logger.log("Removing horizontal seam...");
 

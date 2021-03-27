@@ -109,6 +109,11 @@ public class ImageProcessor extends FunctioalForEachLoops {
 	}
 
 	public BufferedImage gradientMagnitude() {
+		if (inWidth < 2 || inHeight < 2){
+			logger.log("Image is too small");
+			return null;
+		}
+
 		logger.log("Prepareing for gradient magnitude...");
 
 		BufferedImage grey = greyscale();

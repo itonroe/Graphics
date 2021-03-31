@@ -120,27 +120,27 @@ public class ImageProcessor extends FunctioalForEachLoops {
 		BufferedImage ans = newEmptyInputSizedImage();
 
 		forEach((y, x) -> {
-			Color current = new Color(workingImage.getRGB(x, y));
+			Color current = new Color(grey.getRGB(x, y));
 			int gradientX;
 			int gradientY;
 
 			if (x < grey.getWidth() - 1){
 				//Calc Forward
-				gradientX = Differencing(new Color(workingImage.getRGB(x + 1, y)), current);
+				gradientX = Differencing(new Color(grey.getRGB(x + 1, y)), current);
 			}
 			else{
 				//Calc Backward
-				gradientX = Differencing(current, new Color(workingImage.getRGB(x - 1, y)));
+				gradientX = Differencing(current, new Color(grey.getRGB(x - 1, y)));
 			}
 
 
 			if (y < grey.getHeight() - 1){
 				//Calc Forward
-				gradientY = Differencing(new Color(workingImage.getRGB(x, y + 1)), current);
+				gradientY = Differencing(new Color(grey.getRGB(x, y + 1)), current);
 			}
 			else{
 				//Calc Backward
-				gradientY = Differencing(current, new Color(workingImage.getRGB(x, y - 1)));
+				gradientY = Differencing(current, new Color(grey.getRGB(x, y - 1)));
 			}
 
 			//Do gradientX and gradientY power in 2
@@ -148,7 +148,7 @@ public class ImageProcessor extends FunctioalForEachLoops {
 			gradientY = (int)Math.pow(gradientY, 2);
 
 			//Sqrt of Avg
-			int gradientMagnitude = (int)Math.sqrt((gradientX + gradientY) / 2);
+			int gradientMagnitude = 255 - (int)Math.sqrt((gradientX + gradientY) / 2);
 
 			Color color = new Color(gradientMagnitude, gradientMagnitude, gradientMagnitude);
 			ans.setRGB(x, y, color.getRGB());

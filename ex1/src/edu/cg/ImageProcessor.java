@@ -5,7 +5,7 @@ import java.awt.geom.Point2D;
 import java.awt.image.BufferedImage;
 
 public class ImageProcessor extends FunctioalForEachLoops {
-	
+
 	//MARK: Fields
 	public final Logger logger;
 	public final BufferedImage workingImage;
@@ -15,12 +15,12 @@ public class ImageProcessor extends FunctioalForEachLoops {
 	public final int workingImageType;
 	public final int outWidth;
 	public final int outHeight;
-	
+
 	//MARK: Constructors
 	public ImageProcessor(Logger logger, BufferedImage workingImage,
-			RGBWeights rgbWeights, int outWidth, int outHeight) {
+						  RGBWeights rgbWeights, int outWidth, int outHeight) {
 		super(); //Initializing for each loops...
-		
+
 		this.logger = logger;
 		this.workingImage = workingImage;
 		this.rgbWeights = rgbWeights;
@@ -31,25 +31,25 @@ public class ImageProcessor extends FunctioalForEachLoops {
 		this.outHeight = outHeight;
 		setForEachInputParameters();
 	}
-	
+
 	public ImageProcessor(Logger logger,
-			BufferedImage workingImage,
-			RGBWeights rgbWeights) {
+						  BufferedImage workingImage,
+						  RGBWeights rgbWeights) {
 		this(logger, workingImage, rgbWeights,
 				workingImage.getWidth(), workingImage.getHeight());
 	}
-	
+
 	//MARK: Change picture hue - example
 	public BufferedImage changeHue() {
 		logger.log("Prepareing for hue changing...");
-		
+
 		int r = rgbWeights.redWeight;
 		int g = rgbWeights.greenWeight;
 		int b = rgbWeights.blueWeight;
 		int max = rgbWeights.maxWeight;
-		
+
 		BufferedImage ans = newEmptyInputSizedImage();
-		
+
 		forEach((y, x) -> {
 			Color c = new Color(workingImage.getRGB(x, y));
 			int red = r*c.getRed() / max;
@@ -58,33 +58,33 @@ public class ImageProcessor extends FunctioalForEachLoops {
 			Color color = new Color(red, green, blue);
 			ans.setRGB(x, y, color.getRGB());
 		});
-		
+
 		logger.log("Changing hue done!");
-		
+
 		return ans;
 	}
-	
+
 	//MARK: Nearest neighbor - example
 	public BufferedImage nearestNeighbor() {
 		logger.log("applies nearest neighbor interpolation.");
 		BufferedImage ans = newEmptyOutputSizedImage();
-		
+
 		pushForEachParameters();
 		setForEachOutputParameters();
-		
+
 		forEach((y, x) -> {
-			int imgX = (int)Math.round((x*inWidth) / ((float)outWidth));
-			int imgY = (int)Math.round((y*inHeight) / ((float)outHeight));
+			int imgX = Math.round((x*inWidth) / ((float)outWidth));
+			int imgY = Math.round((y*inHeight) / ((float)outHeight));
 			imgX = Math.min(imgX,  inWidth-1);
 			imgY = Math.min(imgY, inHeight-1);
 			ans.setRGB(x, y, workingImage.getRGB(imgX, imgY));
 		});
-		
+
 		popForEachParameters();
-		
+
 		return ans;
 	}
-	
+
 	//MARK: Unimplemented methods
 	public BufferedImage greyscale() {
 		logger.log("Prepareing for grey scale...");
@@ -108,34 +108,40 @@ public class ImageProcessor extends FunctioalForEachLoops {
 		return ans;
 	}
 
+	//each pixel in the gradientMagnitude is calculated by the L2 norm gradient of the original pixel
 	public BufferedImage gradientMagnitude() {
+		if (inWidth < 2 || inHeight < 2){
+			logger.log("Image is too small");
+			return null;
+		}
+
 		logger.log("Prepareing for gradient magnitude...");
 
 		BufferedImage grey = greyscale();
 		BufferedImage ans = newEmptyInputSizedImage();
 
 		forEach((y, x) -> {
-			Color current = new Color(workingImage.getRGB(x, y));
+			Color current = new Color(grey.getRGB(x, y));
 			int gradientX;
 			int gradientY;
 
 			if (x < grey.getWidth() - 1){
 				//Calc Forward
-				gradientX = Differencing(new Color(workingImage.getRGB(x + 1, y)), current);
+				gradientX = Differencing(new Color(grey.getRGB(x + 1, y)), current);
 			}
 			else{
 				//Calc Backward
-				gradientX = Differencing(current, new Color(workingImage.getRGB(x - 1, y)));
+				gradientX = Differencing(current, new Color(grey.getRGB(x - 1, y)));
 			}
 
 
 			if (y < grey.getHeight() - 1){
 				//Calc Forward
-				gradientY = Differencing(new Color(workingImage.getRGB(x, y + 1)), current);
+				gradientY = Differencing(new Color(grey.getRGB(x, y + 1)), current);
 			}
 			else{
 				//Calc Backward
-				gradientY = Differencing(current, new Color(workingImage.getRGB(x, y - 1)));
+				gradientY = Differencing(current, new Color(grey.getRGB(x, y - 1)));
 			}
 
 			//Do gradientX and gradientY power in 2
@@ -143,7 +149,7 @@ public class ImageProcessor extends FunctioalForEachLoops {
 			gradientY = (int)Math.pow(gradientY, 2);
 
 			//Sqrt of Avg
-			int gradientMagnitude = (int)Math.sqrt((gradientX + gradientY) / 2);
+			int gradientMagnitude = 255 - (int)Math.sqrt((gradientX + gradientY) / 2);
 
 			Color color = new Color(gradientMagnitude, gradientMagnitude, gradientMagnitude);
 			ans.setRGB(x, y, color.getRGB());
@@ -158,20 +164,18 @@ public class ImageProcessor extends FunctioalForEachLoops {
 		return c1.getRed() - c2.getRed();
 	}
 
+	//resize the image using 4 nearest neighbors
 	public BufferedImage bilinear() {
 		logger.log("Prepareing for bilinear interpolation...");
 
 		BufferedImage ans = newEmptyOutputSizedImage();
 
-		forEach((y, x) -> {
-
-			if (y == 0 && x == 2)
-			{
-				logger.log("Maya");
-			}
-			try {
-				int x1 = (int)Math.round((x*inWidth) / ((float)outWidth));
-				int y1 = (int)Math.round((y*inHeight) / ((float)outHeight));
+		for(int x = 0; x < outWidth; x++)
+			for(int y = 0; y < outHeight; y++){
+				float fx = ((float)x / outWidth) * (inWidth - 1);
+				float fy = ((float)y / outHeight) * (inHeight - 1);
+				int x1 = (int)fx;
+				int y1 = (int)fy;
 				x1 = Math.min(x1,  inWidth-2);
 				y1 = Math.min(y1, inHeight-2);
 
@@ -183,63 +187,59 @@ public class ImageProcessor extends FunctioalForEachLoops {
 				Color Q12 = new Color(workingImage.getRGB(x1, y2));
 				Color Q22 = new Color(workingImage.getRGB(x2, y2));
 
-				final int denominator = ((x2 - x1) * (y2 - y1));
+				int red12 = (int)lerp(Q11.getRed(), Q21.getRed(), fx - x1);
+				int green12 = (int)lerp(Q11.getGreen(), Q21.getGreen(), fx - x1);
+				int blue12 = (int)lerp(Q11.getBlue(), Q21.getBlue(), fx - x1);
+				int red34 = (int)lerp(Q12.getRed(), Q22.getRed(), fx - x1);
+				int green34 = (int)lerp(Q12.getGreen(), Q22.getGreen(), fx - x1);
+				int blue34 = (int)lerp(Q12.getBlue(), Q22.getBlue(), fx - x1);
 
-				Color C11 = ScalarMultColor(Q11, ((x2 - x) * (y2 - y)) / denominator);
-				Color C21 = ScalarMultColor(Q21, ((x - x1) * (y2 - y)) / denominator);
-				Color C12 = ScalarMultColor(Q12, ((x2 - x) * (y - y1)) / denominator);
-				Color C22 = ScalarMultColor(Q22, ((x - x1) * (y - y1)) / denominator);
+				int red = (int)lerp(red12, red34, fy - y1);
+				int green = (int)lerp(green12, green34, fy - y1);
+				int blue = (int)lerp(blue12, blue34, fy - y1);
 
-				Color P = new Color(C11.getRed() + C12.getRed() + C21.getRed() + C22.getRed(),
-						C11.getGreen() + C12.getGreen() + C21.getGreen() + C22.getGreen(),
-						C11.getBlue() + C12.getBlue() + C21.getBlue() + C22.getBlue());
-
+				Color P = new Color(red, green, blue);
 				ans.setRGB(x, y, P.getRGB());
-			}catch (Exception e){
-				logger.log(x + ", " + y);
 			}
-		});
 
 		logger.log("Bilinear interpolation is done!");
 
 		return ans;
 	}
 
-	private Color ScalarMultColor (Color c, int scalar){
-		int r = c.getRed() * scalar;
-		int b = c.getBlue() * scalar;
-		int g = c.getGreen() * scalar;
-
-		return new Color(r, g, b);
+	//y = t * f(P2) + (1 - t) * f(P1)
+	private static float lerp(int c1, int c2, float t) {
+		return (1 - t) * c1 + t * c2;
 	}
+
 	//MARK: Utilities
 	public final void setForEachInputParameters() {
 		setForEachParameters(inWidth, inHeight);
 	}
-	
+
 	public final void setForEachOutputParameters() {
 		setForEachParameters(outWidth, outHeight);
 	}
-	
+
 	public final BufferedImage newEmptyInputSizedImage() {
 		return newEmptyImage(inWidth, inHeight);
 	}
-	
+
 	public final BufferedImage newEmptyOutputSizedImage() {
 		return newEmptyImage(outWidth, outHeight);
 	}
-	
+
 	public final BufferedImage newEmptyImage(int width, int height) {
 		return new BufferedImage(width, height, workingImageType);
 	}
-	
+
 	public final BufferedImage duplicateWorkingImage() {
 		BufferedImage output = newEmptyInputSizedImage();
-		
-		forEach((y, x) -> 
-			output.setRGB(x, y, workingImage.getRGB(x, y))
+
+		forEach((y, x) ->
+				output.setRGB(x, y, workingImage.getRGB(x, y))
 		);
-		
+
 		return output;
 	}
 }

@@ -172,6 +172,7 @@ public class ImageProcessor extends FunctioalForEachLoops {
 
 		for(int x = 0; x < outWidth; x++)
 			for(int y = 0; y < outHeight; y++){
+			try {
 				float fx = ((float)x / outWidth) * (inWidth - 1);
 				float fy = ((float)y / outHeight) * (inHeight - 1);
 				int x1 = (int)fx;
@@ -201,6 +202,7 @@ public class ImageProcessor extends FunctioalForEachLoops {
 				Color P = new Color(red, green, blue);
 				ans.setRGB(x, y, P.getRGB());
 			}
+		};
 
 		logger.log("Bilinear interpolation is done!");
 

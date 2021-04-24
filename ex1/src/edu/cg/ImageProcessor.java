@@ -5,7 +5,7 @@ import java.awt.geom.Point2D;
 import java.awt.image.BufferedImage;
 
 public class ImageProcessor extends FunctioalForEachLoops {
-	
+
 	//MARK: Fields
 	public final Logger logger;
 	public final BufferedImage workingImage;
@@ -15,12 +15,12 @@ public class ImageProcessor extends FunctioalForEachLoops {
 	public final int workingImageType;
 	public final int outWidth;
 	public final int outHeight;
-	
+
 	//MARK: Constructors
 	public ImageProcessor(Logger logger, BufferedImage workingImage,
-			RGBWeights rgbWeights, int outWidth, int outHeight) {
+						  RGBWeights rgbWeights, int outWidth, int outHeight) {
 		super(); //Initializing for each loops...
-		
+
 		this.logger = logger;
 		this.workingImage = workingImage;
 		this.rgbWeights = rgbWeights;
@@ -31,25 +31,25 @@ public class ImageProcessor extends FunctioalForEachLoops {
 		this.outHeight = outHeight;
 		setForEachInputParameters();
 	}
-	
+
 	public ImageProcessor(Logger logger,
-			BufferedImage workingImage,
-			RGBWeights rgbWeights) {
+						  BufferedImage workingImage,
+						  RGBWeights rgbWeights) {
 		this(logger, workingImage, rgbWeights,
 				workingImage.getWidth(), workingImage.getHeight());
 	}
-	
+
 	//MARK: Change picture hue - example
 	public BufferedImage changeHue() {
 		logger.log("Prepareing for hue changing...");
-		
+
 		int r = rgbWeights.redWeight;
 		int g = rgbWeights.greenWeight;
 		int b = rgbWeights.blueWeight;
 		int max = rgbWeights.maxWeight;
-		
+
 		BufferedImage ans = newEmptyInputSizedImage();
-		
+
 		forEach((y, x) -> {
 			Color c = new Color(workingImage.getRGB(x, y));
 			int red = r*c.getRed() / max;
@@ -58,33 +58,33 @@ public class ImageProcessor extends FunctioalForEachLoops {
 			Color color = new Color(red, green, blue);
 			ans.setRGB(x, y, color.getRGB());
 		});
-		
+
 		logger.log("Changing hue done!");
-		
+
 		return ans;
 	}
-	
+
 	//MARK: Nearest neighbor - example
 	public BufferedImage nearestNeighbor() {
 		logger.log("applies nearest neighbor interpolation.");
 		BufferedImage ans = newEmptyOutputSizedImage();
-		
+
 		pushForEachParameters();
 		setForEachOutputParameters();
-		
+
 		forEach((y, x) -> {
-			int imgX = (int)Math.round((x*inWidth) / ((float)outWidth));
-			int imgY = (int)Math.round((y*inHeight) / ((float)outHeight));
+			int imgX = Math.round((x*inWidth) / ((float)outWidth));
+			int imgY = Math.round((y*inHeight) / ((float)outHeight));
 			imgX = Math.min(imgX,  inWidth-1);
 			imgY = Math.min(imgY, inHeight-1);
 			ans.setRGB(x, y, workingImage.getRGB(imgX, imgY));
 		});
-		
+
 		popForEachParameters();
-		
+
 		return ans;
 	}
-	
+
 	//MARK: Unimplemented methods
 	public BufferedImage greyscale() {
 		logger.log("Prepareing for grey scale...");
@@ -108,6 +108,7 @@ public class ImageProcessor extends FunctioalForEachLoops {
 		return ans;
 	}
 
+	//each pixel in the gradientMagnitude is calculated by the L2 norm gradient of the original pixel
 	public BufferedImage gradientMagnitude() {
 		if (inWidth < 2 || inHeight < 2){
 			logger.log("Image is too small");
@@ -163,6 +164,7 @@ public class ImageProcessor extends FunctioalForEachLoops {
 		return c1.getRed() - c2.getRed();
 	}
 
+	//resize the image using 4 nearest neighbors
 	public BufferedImage bilinear() {
 		logger.log("Prepareing for bilinear interpolation...");
 
@@ -170,11 +172,6 @@ public class ImageProcessor extends FunctioalForEachLoops {
 
 		for(int x = 0; x < outWidth; x++)
 			for(int y = 0; y < outHeight; y++){
-
-			if (y == 0 && x == 650)
-			{
-				logger.log("Maya");
-			}
 			try {
 				float fx = ((float)x / outWidth) * (inWidth - 1);
 				float fy = ((float)y / outHeight) * (inHeight - 1);
@@ -204,8 +201,6 @@ public class ImageProcessor extends FunctioalForEachLoops {
 
 				Color P = new Color(red, green, blue);
 				ans.setRGB(x, y, P.getRGB());
-			}catch (Exception e){
-				logger.log(x + ", " + y);
 			}
 		};
 
@@ -214,6 +209,7 @@ public class ImageProcessor extends FunctioalForEachLoops {
 		return ans;
 	}
 
+	//y = t * f(P2) + (1 - t) * f(P1)
 	private static float lerp(int c1, int c2, float t) {
 		return (1 - t) * c1 + t * c2;
 	}
@@ -222,30 +218,30 @@ public class ImageProcessor extends FunctioalForEachLoops {
 	public final void setForEachInputParameters() {
 		setForEachParameters(inWidth, inHeight);
 	}
-	
+
 	public final void setForEachOutputParameters() {
 		setForEachParameters(outWidth, outHeight);
 	}
-	
+
 	public final BufferedImage newEmptyInputSizedImage() {
 		return newEmptyImage(inWidth, inHeight);
 	}
-	
+
 	public final BufferedImage newEmptyOutputSizedImage() {
 		return newEmptyImage(outWidth, outHeight);
 	}
-	
+
 	public final BufferedImage newEmptyImage(int width, int height) {
 		return new BufferedImage(width, height, workingImageType);
 	}
-	
+
 	public final BufferedImage duplicateWorkingImage() {
 		BufferedImage output = newEmptyInputSizedImage();
-		
-		forEach((y, x) -> 
-			output.setRGB(x, y, workingImage.getRGB(x, y))
+
+		forEach((y, x) ->
+				output.setRGB(x, y, workingImage.getRGB(x, y))
 		);
-		
+
 		return output;
 	}
 }

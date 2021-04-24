@@ -6,23 +6,23 @@ import java.util.List;
 
 
 public class BasicSeamsCarver extends ImageProcessor {
-	
+
 	// An enum describing the carving scheme used by the seams carver.
 	// VERTICAL_HORIZONTAL means vertical seams are removed first.
 	// HORIZONTAL_VERTICAL means horizontal seams are removed first.
 	// INTERMITTENT means seams are removed intermittently : vertical, horizontal, vertical, horizontal etc.
-	public static enum CarvingScheme {
+	public enum CarvingScheme {
 		VERTICAL_HORIZONTAL("Vertical seams first"),
 		HORIZONTAL_VERTICAL("Horizontal seams first"),
 		INTERMITTENT("Intermittent carving");
-		
+
 		public final String description;
-		
-		private CarvingScheme(String description) {
+
+		CarvingScheme(String description) {
 			this.description = description;
 		}
 	}
-	
+
 	// A simple coordinate class which assists the implementation.
 	protected class Coordinate{
 		public int X;
@@ -52,17 +52,17 @@ public class BasicSeamsCarver extends ImageProcessor {
 			return array;
 		}
 	}
-	
+
 	// TODO :  Decide on the fields your BasicSeamsCarver should include. Refer to the recitation and homework
 	BufferedImage greyImage;
 	List<Seam> seams;
-	double M_Energy[][];
+	double[][] M_Energy;
 	int actualWidth;
 	int actualHeight;
-	Coordinate coordinates[][];
+	public Coordinate[][] coordinates;
 
 	public BasicSeamsCarver(Logger logger, BufferedImage workingImage,
-			int outWidth, int outHeight, RGBWeights rgbWeights) {
+							int outWidth, int outHeight, RGBWeights rgbWeights) {
 		super((s) -> logger.log("Seam carving: " + s), workingImage, rgbWeights, outWidth, outHeight);
 
 		greyImage = greyscale();
@@ -97,6 +97,26 @@ public class BasicSeamsCarver extends ImageProcessor {
 			case HORIZONTAL_VERTICAL:
 				for (int i = 0; i < numberOfHorizontalSeamsToCarve; i ++){
 					FindAndRemoveOneHorizontalSeam();
+				}
+        
+				for (int i = 0; i < numberOfVerticalSeamsToCarve; i ++){
+					FindAndRemoveOneVerticalSeam();
+				}
+				break;
+
+			case INTERMITTENT:
+				while(numberOfHorizontalSeamsToCarve > 0 && numberOfVerticalSeamsToCarve > 0){
+					FindAndRemoveOneVerticalSeam();
+					numberOfVerticalSeamsToCarve--;
+
+					FindAndRemoveOneHorizontalSeam();
+					numberOfHorizontalSeamsToCarve--;
+
+				}
+
+				while(numberOfHorizontalSeamsToCarve > 0){
+					FindAndRemoveOneHorizontalSeam();
+					numberOfHorizontalSeamsToCarve--;
 				}
 
 				for (int i = 0; i < numberOfVerticalSeamsToCarve; i ++){
@@ -152,19 +172,22 @@ public class BasicSeamsCarver extends ImageProcessor {
 		removeHorizontalSeam(seam);
 	}
 
+	//Initiate the coordinate matrix
 	private void InitializeCoordinates() {
 		forEach((y, x) -> {
 			coordinates[y][x] = new Coordinate(x,y);
 		});
 	}
 
+	//set the calculated energy for each pixel in the image
 	private void InitializeEnergy(){
 		//Initialize Energy Matrix Value
 		forEach((y, x) -> {
 			M_Energy[y][x] = calcPixelEnergy(x, y);
 		});
 	}
-
+  
+	//calculate the cost of each pixel in vertical seams (energy + new edge cost)
 	private double[][] CalcCostVertical(){
 		double[][] M_CostVertical = new double[actualHeight][actualWidth];
 
@@ -191,6 +214,14 @@ public class BasicSeamsCarver extends ImageProcessor {
 	private double[][] CalcCostHorizontal(){
 		double[][] M_CostHorizontal = new double[actualHeight][actualWidth];
 
+
+		return M_CostVertical;
+	}
+
+	//calculate the cost of each pixel in horizontal seams (energy + new edge cost)
+	private double[][] CalcCostHorizontal(){
+		double[][] M_CostHorizontal = new double[actualHeight][actualWidth];
+
 		logger.log("Initialize horizontal seam...");
 
 		//Initialize Cost Matrix Value
@@ -208,6 +239,12 @@ public class BasicSeamsCarver extends ImageProcessor {
 					logger.log("weeeee - " + x + ", " + y);
 				}
 
+
+				if (x == 0){
+					M_CostHorizontal[y][x] = (y == 0 || y == actualHeight - 1) ? currentEnergy : currentEnergy + Math.abs(getPixelEnergy(x, y + 1) - getPixelEnergy(x, y - 1));
+				}else {
+					M_CostHorizontal[y][x] = currentEnergy + getMinCostValueHorizontal(M_CostHorizontal, x, y);
+				}
 			}
 		}
 
@@ -215,8 +252,8 @@ public class BasicSeamsCarver extends ImageProcessor {
 
 		return M_CostHorizontal;
 	}
-
-	//0 - R, 1 - V, 2 - L
+  
+	//0 - R, 1 - V, 2 - L (The cost of the new edge created by removing the specific pixel vertically)
 	private double[] calcEdgeCostVertical (int x, int y){
 		double cR, cL, cV;
 
@@ -239,7 +276,7 @@ public class BasicSeamsCarver extends ImageProcessor {
 		return new double[] { cR, cV, cL };
 	}
 
-	//0 - U, 1 - M, 2 - B
+	//0 - U, 1 - M, 2 - B (The cost of the new edge created by removing the specific pixel horizontally)
 	private double[] calcEdgeCostHorizontal (int x, int y){
 		double cU, cB, cM;
 
@@ -262,6 +299,7 @@ public class BasicSeamsCarver extends ImageProcessor {
 		return new double[] { cU, cM, cB };
 	}
 
+	//calculate the minimal edge value added by removing the pixel vertically
 	private double getMinCostValueVertical (double[][] M_Vertical, int x, int y){
 		double[] edgesCost = calcEdgeCostVertical(x , y);
 
@@ -289,6 +327,7 @@ public class BasicSeamsCarver extends ImageProcessor {
 		return minCostValue;
 	}
 
+	//calculate the minimal edge value added by removing the pixel horizontally
 	private double getMinCostValueHorizontal (double[][] M_Vertical, int x, int y){
 		double[] edgesCost = calcEdgeCostHorizontal(x , y);
 
@@ -311,17 +350,32 @@ public class BasicSeamsCarver extends ImageProcessor {
 			costB = M_Vertical[y + 1][x - 1] + costB;
 			costU = M_Vertical[y - 1][x - 1] + costU;
 
+
+		if (y == 0){
+			costB = M_Vertical[y + 1][x - 1] + costB;
+
+			minCostValue = Math.min(costM, costB);
+		} else if (y == actualHeight - 1){
+			costU = M_Vertical[y - 1][x - 1] + costU;
+
+			minCostValue = Math.min(costM, costU);
+		} else {
+			costB = M_Vertical[y + 1][x - 1] + costB;
+			costU = M_Vertical[y - 1][x - 1] + costU;
+
 			minCostValue = Math.min(costU, Math.min(costM, costB));
 		}
 
 		return minCostValue;
 	}
 
+	//get the RGB in the corresponding coordinates in the original image
 	private int getRGBCoordinate(int x, int y){
 		Coordinate coordinate = getSuitableCoordinate(x, y);
 		return greyImage.getRGB(coordinate.X, coordinate.Y) & 0xFF;
 	}
 
+	//find the optimal vertical seam to remove
 	private Seam verticalSeam(){
 
 		double[][] M_Vertical = CalcCostVertical();
@@ -353,7 +407,6 @@ public class BasicSeamsCarver extends ImageProcessor {
 				//STOP
 				logger.log("debug");
 			}
-
 			if (minX < actualWidth - 1 && minVal == (float)(currentEnergy + M_Vertical[y - 1][minX + 1] + cR)){
 				minX ++;
 			}
@@ -375,6 +428,7 @@ public class BasicSeamsCarver extends ImageProcessor {
 		return currentSeam;
 	}
 
+	//find the optimal horizontal seam to remove
 	private Seam horizontalSeam(){
 
 		double[][] M_Horizontal = CalcCostHorizontal();
@@ -411,6 +465,9 @@ public class BasicSeamsCarver extends ImageProcessor {
 			else if (minVal != (float)(currentEnergy + M_Horizontal[minY][x - 1] + cM)) {
 				logger.log(x + ", " + minY);
 			}
+			else if (minY > 0 && minVal == (float)(currentEnergy + M_Horizontal[minY - 1][x - 1] + cU)){
+				minY --;
+			}
 
 			minVal = (float)M_Horizontal[minY][x - 1];
 
@@ -423,6 +480,7 @@ public class BasicSeamsCarver extends ImageProcessor {
 		return currentSeam;
 	}
 
+	//remove the given horizontal seam
 	private void removeHorizontalSeam(Seam seam){
 
 		logger.log("Removing horizontal seam...");
@@ -438,6 +496,7 @@ public class BasicSeamsCarver extends ImageProcessor {
 		logger.log("Finished removing vertical seam...");
 	}
 
+	//remove the given vertical seam
 	private void removeVerticalSeam(Seam seam){
 
 		logger.log("Removing vertical seam...");
@@ -466,15 +525,19 @@ public class BasicSeamsCarver extends ImageProcessor {
 			if (c.X < actualWidth){
 				calcCostVertical(c.X, c.Y);
 			}*/
+		for (Coordinate c : seam.pixels)
+			for (int x = c.X; x < actualWidth; x++)
+				coordinates[c.Y][x] = coordinates[c.Y][x + 1];
 
 		logger.log("Finished removing vertical seam...");
 	}
 
+	//returns the energy of the given pixel
 	private double getPixelEnergy(int x, int y){
 		Coordinate coordinate = getSuitableCoordinate(x, y);
 		return M_Energy[coordinate.Y][coordinate.X];
 	}
-
+	//calculate the energy of the given pixel (gradient)
 	private double calcPixelEnergy(int x, int y){
 		double Ex = Math.abs(getRGBCoordinate(x, y) - (x < actualWidth - 1 ? getRGBCoordinate(x + 1, y) : getRGBCoordinate(x - 1, y)));
 		double Ey = Math.abs(getRGBCoordinate(x, y) - (y < actualHeight - 1 ? getRGBCoordinate(x, y + 1) : getRGBCoordinate(x, y - 1)));
@@ -485,10 +548,12 @@ public class BasicSeamsCarver extends ImageProcessor {
 		return Math.sqrt(Ex + Ey);
 	}
 
+	//returns the coordinates of the corresponding pixel in the image after resizing
 	private Coordinate getSuitableCoordinate(int x, int y){
 		return coordinates[y][x];
 	}
-	
+
+	//show all seams to be removed
 	public BufferedImage showSeams(boolean showVerticalSeams, int seamColorRGB) {
 		int numberOfVerticalSeamsToCarve = Math.abs(this.outWidth - this.inWidth);
 		int numberOfHorizontalSeamsToCarve = Math.abs(this.outHeight - this.inHeight);
@@ -521,6 +586,7 @@ public class BasicSeamsCarver extends ImageProcessor {
 		return ans;
 	}
 
+	//color the specify seam
 	private void ColorizePixels(Seam seam, BufferedImage ans, int seamColorRGB){
 		for (Coordinate coordinate : seam.pixels) {
 			Coordinate realCoordinate = getSuitableCoordinate(coordinate.X, coordinate.Y);

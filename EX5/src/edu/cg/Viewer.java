@@ -126,10 +126,9 @@ public class Viewer {
         canvasHeight = height;
         glMatrixMode(GL_PROJECTION);
         glLoadIdentity();
-        double w, h;
-        w = 3;
-        h = 3 * ((double) height / width);
-        glOrtho(-w / 2, w / 2, -h / 2, h / 2, -2.0, 2.0);
+
+        double newBaseUnit = 0.1D * height / width;
+        glFrustum(-newBaseUnit, newBaseUnit, -newBaseUnit, newBaseUnit, Specification.BASE_UNIT, 2000);
     }
 
     /**
@@ -181,14 +180,18 @@ public class Viewer {
         boolean flag = glIsEnabled(GL_LIGHTING);
         glDisable(GL_LIGHTING);
         glBegin(GL_LINES);
+
+        // X axis
         glColor3d(1, 0, 0);
         glVertex3d(0, 0, 0);
         glVertex3d(1, 0, 0);
 
+        // Y axis
         glColor3d(0, 1, 0);
         glVertex3d(0, 0, 0);
         glVertex3d(0, 1, 0);
 
+        // Z axis
         glColor3d(0, 0, 1);
         glVertex3d(0, 0, 0);
         glVertex3d(0, 0, 1);

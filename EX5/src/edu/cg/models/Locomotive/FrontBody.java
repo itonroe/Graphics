@@ -3,6 +3,7 @@ package edu.cg.models.Locomotive;
 import edu.cg.models.Box;
 import edu.cg.models.IRenderable;
 
+import static org.lwjgl.opengl.GL11.glPopMatrix;
 import static org.lwjgl.opengl.GL21.*;
 
 /***
@@ -25,10 +26,62 @@ public class FrontBody implements IRenderable {
     @Override
     public void render() {
         glPushMatrix();
-        // TODO(6): Render each part along with affine transformations in order to bring every component to the
+        //TODO(6): Render each part along with affine transformations in order to bring every component to the
         //          front-body coordinate system. You should make sure that the OpenGL ModelView matrix when applied on
         //          the relevant component it will transform it to the proper location in the front-body coordinate
         //          system.
+
+        Materials.setMaterialChassis();
+
+        renderChassis();
+        renderWheels();
+        renderChimney();
+        renderCarLights();
+
+        glPopMatrix();
+    }
+
+    private void renderChassis(){
+        this.chassis.render();
+
+        // Set chassis as base for the rest of the car
+        glPushMatrix();
+    }
+
+    private void renderChimney(){
+        glPushMatrix();
+
+        glTranslated(0, Specification.FRONT_BODY_HEIGHT + (Specification.WHEEL_RADIUS / 2), 0);
+        this.chimney.render();
+
+        glPopMatrix();
+    }
+
+    private void renderCarLights() {
+        // Push lights to the front of the car
+        glTranslated(0, 0, Specification.FRONT_BODY_DEPTH / 2);
+        glPushMatrix();
+
+        glTranslated(Specification.BASE_UNIT, 0, 0);
+        this.carLight.render();
+        glPopMatrix();
+
+        glTranslated(-Specification.BASE_UNIT, 0, 0);
+        this.carLight.render();
+        glPopMatrix();
+    }
+
+    private void renderWheels(){
+        // Drop the wheels below the X axis
+        glTranslated(0, -Specification.WHEEL_RADIUS, 0);
+        glPushMatrix();
+
+        glTranslated(Specification.FRONT_BODY_WIDTH / 2, 0, 0);
+        this.wheel.render();
+        glPopMatrix();
+
+        glTranslated(-Specification.FRONT_BODY_WIDTH / 2, 0, 0);
+        this.wheel.render();
         glPopMatrix();
     }
 
